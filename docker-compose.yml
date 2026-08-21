@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: apache_php
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./web/public_html:/var/www/html/public_html
+      - ./web/miapp.conf:/etc/apache2/sites-available/miapp.conf
+      - ./web/security.conf:/etc/apache2/conf-available/security-custom.conf
+    environment:
+      - APACHE_RUN_USER=www-data
+      - APACHE_RUN_GROUP=www-data
+      - TZ=America/Mexico_City
+    networks:
+      - app-network
+
+  db:
+    image: mariadb:10.11
+    container_name: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: miapp_db
+      MYSQL_USER: miapp_user
+      MYSQL_PASSWORD: miapp_pass
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - app-network
+
+volumes:
+  db_data:
+
+networks:
+  app-network:
