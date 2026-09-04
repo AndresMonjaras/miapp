@@ -1,27 +1,29 @@
 <?php
 /**
- * V1 ProductoResource — exact original logic from origin/main.
- * Routes: /api/v1/productos  (no authentication required)
+ * V2 ProductoResource — Protected by Bearer token authentication.
+ * Routes: /api/v2/productos
  */
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../models/v1/Producto.php';
+require_once __DIR__ . '/../../models/v2/Producto.php';
+require_once __DIR__ . '/../../core/V2_AuthFilter.php';
 
-class V1_ProductoResource
+class V2_ProductoResource
 {
     private $db;
     private $producto;
 
     public function __construct()
     {
-        $database        = new Database();
-        $this->db        = $database->getConnection();
-        $this->producto  = new V1_Producto($this->db);
+        $database       = new Database();
+        $this->db       = $database->getConnection();
+        $this->producto = new V2_Producto($this->db);
     }
 
-    // GET /api/v1/productos
+    // GET /api/v2/productos  (protected)
     public function index()
     {
         header("Content-Type: application/json");
+        V2_AuthFilter::handle($this->db);
 
         $stmt = $this->producto->read();
         $num  = $stmt->rowCount();
@@ -32,7 +34,7 @@ class V1_ProductoResource
 
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 extract($row);
-                $producto_item = [
+                array_push($productos_arr["records"], [
                     "id"          => $id,
                     "sku"         => $sku,
                     "name"        => $name,
@@ -41,10 +43,8 @@ class V1_ProductoResource
                     "stock"       => $stock,
                     "created_at"  => $created_at,
                     "updated_at"  => $updated_at
-                ];
-                array_push($productos_arr["records"], $producto_item);
+                ]);
             }
-
             http_response_code(200);
             echo json_encode($productos_arr);
         } else {
@@ -53,15 +53,17 @@ class V1_ProductoResource
         }
     }
 
-    // GET /api/v1/productos/{id}
+    // GET /api/v2/productos/{id}  (protected)
     public function show($id)
     {
         header("Content-Type: application/json");
+        V2_AuthFilter::handle($this->db);
 
         $this->producto->id = $id;
 
         if ($this->producto->readOne()) {
-            $producto_arr = [
+            http_response_code(200);
+            echo json_encode([
                 "id"          => $this->producto->id,
                 "sku"         => $this->producto->sku,
                 "name"        => $this->producto->name,
@@ -70,19 +72,18 @@ class V1_ProductoResource
                 "stock"       => $this->producto->stock,
                 "created_at"  => $this->producto->created_at,
                 "updated_at"  => $this->producto->updated_at
-            ];
-            http_response_code(200);
-            echo json_encode($producto_arr);
+            ]);
         } else {
             http_response_code(404);
             echo json_encode(["message" => "Producto no encontrado"]);
         }
     }
 
-    // POST /api/v1/productos
+    // POST /api/v2/productos  (protected)
     public function store()
     {
         header("Content-Type: application/json");
+        V2_AuthFilter::handle($this->db);
 
         $data = json_decode(file_get_contents("php://input"));
 
@@ -109,13 +110,13 @@ class V1_ProductoResource
         }
     }
 
-    // PUT /api/v1/productos/{id}
+    // PUT /api/v2/productos/{id}  (protected)
     public function update($id)
     {
         header("Content-Type: application/json");
+        V2_AuthFilter::handle($this->db);
 
         $data = json_decode(file_get_contents("php://input"));
-
         $this->producto->id = $id;
 
         if (!empty($data->sku) && !empty($data->name) && isset($data->price) && isset($data->stock)) {
@@ -138,10 +139,11 @@ class V1_ProductoResource
         }
     }
 
-    // DELETE /api/v1/productos/{id}
+    // DELETE /api/v2/productos/{id}  (protected)
     public function destroy($id)
     {
         header("Content-Type: application/json");
+        V2_AuthFilter::handle($this->db);
 
         $this->producto->id = $id;
 
