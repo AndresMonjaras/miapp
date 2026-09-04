@@ -144,6 +144,11 @@ $lista_usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
         .msg-error { color: #ff6b6b; font-weight: bold; background: rgba(0,0,0,0.3); padding: 10px; margin-bottom: 15px; }
         .msg-success { color: #82e06c; font-weight: bold; background: rgba(0,0,0,0.3); padding: 10px; margin-bottom: 15px; }
         .header-top { display: flex; justify-content: space-between; align-items: center; }
+        .token-badge { font-size: 12px; background: rgba(0,0,0,0.35); border: 1px solid #2389c9; border-radius: 4px; padding: 8px 12px; margin-top: 10px; word-break: break-all; }
+        .token-badge .label { font-weight: bold; text-transform: uppercase; font-size: 11px; color: #82e06c; }
+        .token-badge .label.no-token { color: #ff6b6b; }
+        .token-badge .token-val { font-family: monospace; color: #cce6ff; }
+        .token-badge .expires { color: #aaa; font-size: 11px; margin-top: 3px; }
     </style>
 </head>
 <body>
@@ -153,6 +158,22 @@ $lista_usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <h2 style="border:none; margin:0; padding:0;">Hola, <?php echo htmlspecialchars($_SESSION['nombre']); ?></h2>
             <a href="logout.php" class="btn btn-red">Desconectarse</a>
         </div>
+
+        <!-- V2 API TOKEN STATUS -->
+        <?php if (!empty($_SESSION['api_token'])): ?>
+        <div class="token-badge">
+            <div class="label">🔐 V2 API Bearer Token (activo)</div>
+            <div class="token-val"><?php echo substr($_SESSION['api_token'], 0, 16) . '...' . substr($_SESSION['api_token'], -8); ?></div>
+            <?php if (!empty($_SESSION['api_expires_at'])): ?>
+            <div class="expires">Expira: <?php echo htmlspecialchars($_SESSION['api_expires_at']); ?></div>
+            <?php endif; ?>
+        </div>
+        <?php else: ?>
+        <div class="token-badge">
+            <div class="label no-token">⚠ V2 API Token — no disponible</div>
+            <div class="expires">El usuario web no tiene cuenta en api_users, o la contraseña no coincide.</div>
+        </div>
+        <?php endif; ?>
 
         <?php if ($error) echo "<div class='msg-error'>$error</div>"; ?>
         <?php if ($mensaje) echo "<div class='msg-success'>$mensaje</div>"; ?>

@@ -2,15 +2,18 @@
 require_once 'config.php';
 require_once 'funciones.php';
 
+$error = null;
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     try {
-        $email = trim($_POST['email'] ?? '');
-        $password = $_POST['password'] ?? '';
+        $email    = trim($_POST['email']    ?? '');
+        $password = $_POST['password']      ?? '';
 
         if (empty($email) || empty($password)) {
             throw new Exception("Todos los campos son obligatorios.");
         }
 
+        // ── Step 1: Web session auth (tabla usuarios) ──────────────────────
         $stmt = $pdo->prepare("SELECT id, nombre, password FROM usuarios WHERE email = :email");
         $stmt->execute(['email' => $email]);
         $usuario = $stmt->fetch();
@@ -20,9 +23,49 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         $_SESSION['usuario_id'] = $usuario['id'];
-        $_SESSION['nombre'] = $usuario['nombre'];
+        $_SESSION['nombre']     = $usuario['nombre'];
+
+        // ── Step 2: Request V2 Bearer token ───────────────────────────────
+        // Build the API base URL dynamically so this works on both local and server.
+        $scheme   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host     = $_SERVER['HTTP_HOST'];
+        $script   = $_SERVER['SCRIPT_NAME'];              // /22030873/miapp/web/public_html/login.php
+        // Navigate up to project root, then point at api/public
+        $root     = dirname(dirname(dirname($script)));    // /22030873/miapp
+        $apiBase  = $scheme . '://' . $host . $root . '/api/public';
+
+        // Use email prefix as username (admin@miapp.local → admin)
+        // This maps the web user to their api_users counterpart.
+        $apiUsername = strstr($email, '@', true) ?: $email;
+
+        $payload  = json_encode(['username' => $apiUsername, 'password' => $password]);
+        $loginUrl = $apiBase . '/api/v2/login';
+
+        $ctx = stream_context_create([
+            'http' => [
+                'method'  => 'POST',
+                'header'  => "Content-Type: application/json\r\nContent-Length: " . strlen($payload),
+                'content' => $payload,
+                'timeout' => 5,
+                'ignore_errors' => true,
+            ]
+        ]);
+
+        $resp   = @file_get_contents($loginUrl, false, $ctx);
+        $apiData = $resp ? json_decode($resp, true) : null;
+
+        if ($apiData && isset($apiData['access_token'])) {
+            $_SESSION['api_token']      = $apiData['access_token'];
+            $_SESSION['api_expires_at'] = $apiData['expires_at'];
+        } else {
+            // API token not critical for web session — log it but don't block login
+            $_SESSION['api_token']      = null;
+            $_SESSION['api_token_error'] = 'V2 token not issued (api_users may not have this user)';
+        }
+
         redirigir('crud.php');
         exit;
+
     } catch (Exception $e) {
         $error = $e->getMessage();
     }
@@ -38,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             font-family: 'Verdana', sans-serif;
             color: #fff;
             background-color: #1a4f76;
-            background-image: url('imagenes/login.jpg'); /* Tu imagen de fondo */
+            background-image: url('imagenes/login.jpg');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -73,6 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             border-radius: 3px;
             box-sizing: border-box;
             background-color: #f1f1f1;
+            color: #000;
         }
         .btn-green {
             background-color: #4eb539;
@@ -93,14 +137,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <body>
     <div class="habbo-box">
         <h2>Iniciar sesión</h2>
-        <?php if (isset($error)) echo "<div class='error-msg'>$error</div><br>"; ?>
+        <?php if ($error) echo "<div class='error-msg'>$error</div><br>"; ?>
         <form method="post">
             <label>Email:</label>
             <input type="email" name="email" required>
-            
+
             <label>Contraseña:</label>
             <input type="password" name="password" required>
-            
+
             <input type="submit" class="btn-green" value="Entrar">
         </form>
     </div>

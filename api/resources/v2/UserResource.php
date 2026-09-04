@@ -1,12 +1,13 @@
 <?php
 /**
- * V1 UserResource — exact original logic from origin/main.
- * Routes: /api/v1/users  (no authentication required)
+ * V2 UserResource — Protected by Bearer token authentication.
+ * Routes: /api/v2/users
  */
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../models/v1/User.php';
+require_once __DIR__ . '/../../core/V2_AuthFilter.php';
 
-class V1_UserResource
+class V2_UserResource
 {
     private $db;
     private $user;
@@ -15,13 +16,14 @@ class V1_UserResource
     {
         $database   = new Database();
         $this->db   = $database->getConnection();
-        $this->user = new V1_User($this->db);
+        $this->user = new V1_User($this->db); // same users table as V1
     }
 
-    // GET /api/v1/users
+    // GET /api/v2/users  (protected)
     public function index()
     {
         header("Content-Type: application/json");
+        V2_AuthFilter::handle($this->db);
 
         $stmt = $this->user->read();
         $num  = $stmt->rowCount();
@@ -32,15 +34,13 @@ class V1_UserResource
 
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 extract($row);
-                $user_item = [
+                array_push($users_arr["records"], [
                     "id"         => $id,
                     "name"       => $name,
                     "email"      => $email,
                     "created_at" => $created_at
-                ];
-                array_push($users_arr["records"], $user_item);
+                ]);
             }
-
             http_response_code(200);
             echo json_encode($users_arr);
         } else {
@@ -49,32 +49,33 @@ class V1_UserResource
         }
     }
 
-    // GET /api/v1/users/{id}
+    // GET /api/v2/users/{id}  (protected)
     public function show($id)
     {
         header("Content-Type: application/json");
+        V2_AuthFilter::handle($this->db);
 
         $this->user->id = $id;
 
         if ($this->user->readOne()) {
-            $user_arr = [
+            http_response_code(200);
+            echo json_encode([
                 "id"         => $this->user->id,
                 "name"       => $this->user->name,
                 "email"      => $this->user->email,
                 "created_at" => $this->user->created_at
-            ];
-            http_response_code(200);
-            echo json_encode($user_arr);
+            ]);
         } else {
             http_response_code(404);
             echo json_encode(["message" => "Usuario no encontrado"]);
         }
     }
 
-    // POST /api/v1/users
+    // POST /api/v2/users  (protected)
     public function store()
     {
         header("Content-Type: application/json");
+        V2_AuthFilter::handle($this->db);
 
         $data = json_decode(file_get_contents("php://input"));
 
@@ -98,13 +99,13 @@ class V1_UserResource
         }
     }
 
-    // PUT /api/v1/users/{id}
+    // PUT /api/v2/users/{id}  (protected)
     public function update($id)
     {
         header("Content-Type: application/json");
+        V2_AuthFilter::handle($this->db);
 
         $data = json_decode(file_get_contents("php://input"));
-
         $this->user->id = $id;
 
         if (!empty($data->name) && !empty($data->email)) {
@@ -124,10 +125,11 @@ class V1_UserResource
         }
     }
 
-    // DELETE /api/v1/users/{id}
+    // DELETE /api/v2/users/{id}  (protected)
     public function destroy($id)
     {
         header("Content-Type: application/json");
+        V2_AuthFilter::handle($this->db);
 
         $this->user->id = $id;
 

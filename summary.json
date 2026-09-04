@@ -1,0 +1,401 @@
+{
+  "project": "topweb — PHP REST API + Web Frontend",
+  "repository": "https://github.com/AndresMonjaras/miapp.git",
+  "session_date": "2026-09-04",
+  "last_updated": "2026-09-04",
+  "summary": "Restructured a single-version PHP REST API into a dual-version (V1 + V2) architecture running in parallel, deployed to production server, integrated the web frontend login with the V2 Bearer token system, created test users (admin, admin1, mojarra) with password 1234, created a permission-less test user (sinpermisos / INACTIVE), and generated a full Postman collection covering all V1+V2 endpoints with Bearer-token automation.",
+
+  "work_done": [
+
+    {
+      "step": 1,
+      "title": "Codebase Audit",
+      "description": "Read every existing file from git origin/main to capture the exact original state before making any changes.",
+      "files_read": [
+        "api/public/index.php",
+        "api/core/Router.php",
+        "api/config/database.php",
+        "api/models/User.php",
+        "api/models/Producto.php",
+        "api/resources/v1/UserResource.php",
+        "api/resources/v1/ProductoResource.php",
+        "api/database.sql"
+      ]
+    },
+
+    {
+      "step": 2,
+      "title": "V1 Isolation (Legacy Restore)",
+      "description": "Restored the exact original code from origin/main into a dedicated v1/ namespace. No logic, queries, or behavior was changed.",
+      "changes": [
+        {
+          "file": "api/models/v1/User.php",
+          "action": "created",
+          "class": "V1_User",
+          "table": "users",
+          "note": "Exact copy of origin/main User.php, renamed class to V1_User to prevent collisions."
+        },
+        {
+          "file": "api/models/v1/Producto.php",
+          "action": "created",
+          "class": "V1_Producto",
+          "table": "productos",
+          "note": "Exact copy of origin/main Producto.php, renamed class to V1_Producto."
+        },
+        {
+          "file": "api/resources/v1/UserResource.php",
+          "action": "rewritten",
+          "class": "V1_UserResource",
+          "note": "Same logic as origin/main, updated require paths to models/v1/ and renamed class."
+        },
+        {
+          "file": "api/resources/v1/ProductoResource.php",
+          "action": "rewritten",
+          "class": "V1_ProductoResource",
+          "note": "Same logic as origin/main, updated require paths to models/v1/ and renamed class."
+        }
+      ],
+      "endpoints": [
+        "GET    /api/v1/users",
+        "GET    /api/v1/users/{id}",
+        "POST   /api/v1/users",
+        "PUT    /api/v1/users/{id}",
+        "DELETE /api/v1/users/{id}",
+        "GET    /api/v1/productos",
+        "GET    /api/v1/productos/{id}",
+        "POST   /api/v1/productos",
+        "PUT    /api/v1/productos/{id}",
+        "DELETE /api/v1/productos/{id}"
+      ],
+      "authentication": "none"
+    },
+
+    {
+      "step": 3,
+      "title": "V2 Implementation (New Features)",
+      "description": "Implemented a fully isolated V2 layer with Bearer token authentication. V2 shares the same database but adds new tables and a token auth system.",
+      "changes": [
+        {
+          "file": "api/models/v2/ApiUser.php",
+          "action": "created",
+          "class": "V2_ApiUser",
+          "table": "api_users",
+          "methods": ["findByUsername()", "findById()", "toSafeArray()"]
+        },
+        {
+          "file": "api/models/v2/ApiToken.php",
+          "action": "created",
+          "class": "V2_ApiToken",
+          "table": "api_tokens",
+          "methods": ["create()", "validate()", "revoke()", "revokeAllForUser()"],
+          "expiry_minutes": 60
+        },
+        {
+          "file": "api/models/v2/Producto.php",
+          "action": "created",
+          "class": "V2_Producto",
+          "table": "productos",
+          "note": "Same productos table as V1, isolated class to prevent PHP class collision."
+        },
+        {
+          "file": "api/core/V2_AuthFilter.php",
+          "action": "created",
+          "class": "V2_AuthFilter",
+          "note": "Static middleware. Reads Authorization: Bearer <token> header, validates against api_tokens table, aborts with 401 if invalid.",
+          "methods": ["handle()", "getUserId()", "getUser()"]
+        },
+        {
+          "file": "api/resources/v2/AuthResource.php",
+          "action": "created",
+          "class": "V2_AuthResource",
+          "endpoints": {
+            "POST /api/v2/login":  "Validates username+password, returns Bearer token. Constant-time hash comparison prevents timing attacks.",
+            "POST /api/v2/logout": "Validates and revokes the Bearer token.",
+            "GET  /api/v2/me":     "Returns the authenticated user profile (protected)."
+          }
+        },
+        {
+          "file": "api/resources/v2/UserResource.php",
+          "action": "created",
+          "class": "V2_UserResource",
+          "note": "All 5 CRUD methods protected by V2_AuthFilter::handle(). Uses same users table as V1."
+        },
+        {
+          "file": "api/resources/v2/ProductoResource.php",
+          "action": "created",
+          "class": "V2_ProductoResource",
+          "note": "All 5 CRUD methods protected by V2_AuthFilter::handle()."
+        }
+      ],
+      "endpoints": [
+        "POST   /api/v2/login          (public)",
+        "POST   /api/v2/logout         (protected: Bearer token)",
+        "GET    /api/v2/me             (protected: Bearer token)",
+        "GET    /api/v2/users          (protected: Bearer token)",
+        "GET    /api/v2/users/{id}     (protected: Bearer token)",
+        "POST   /api/v2/users          (protected: Bearer token)",
+        "PUT    /api/v2/users/{id}     (protected: Bearer token)",
+        "DELETE /api/v2/users/{id}     (protected: Bearer token)",
+        "GET    /api/v2/productos       (protected: Bearer token)",
+        "GET    /api/v2/productos/{id}  (protected: Bearer token)",
+        "POST   /api/v2/productos       (protected: Bearer token)",
+        "PUT    /api/v2/productos/{id}  (protected: Bearer token)",
+        "DELETE /api/v2/productos/{id}  (protected: Bearer token)"
+      ],
+      "authentication": "Bearer token (Authorization header)"
+    },
+
+    {
+      "step": 4,
+      "title": "Shared Core — Router & Entry Point",
+      "description": "Refactored Router.php and rewrote index.php to support dual-version dispatch without Docker.",
+      "changes": [
+        {
+          "file": "api/core/Router.php",
+          "action": "modified",
+          "key_change": "dispatch() now returns true (route matched) or false (no match) instead of echoing a 404 directly. Allows v1 and v2 routers to chain in index.php."
+        },
+        {
+          "file": "api/public/index.php",
+          "action": "rewritten",
+          "logic": "Creates one Router('v1') and one Router('v2'), registers their routes separately, then runs: if (!routerV1->dispatch() && !routerV2->dispatch()) -> 404. CORS preflight (OPTIONS) handled at the top."
+        }
+      ]
+    },
+
+    {
+      "step": 5,
+      "title": "Database & Environment Configuration",
+      "description": "Wrote a complete DDL+DML SQL script for both local and production. database.php uses production-server credentials so no edits are needed on migration.",
+      "changes": [
+        {
+          "file": "api/config/database.php",
+          "action": "updated",
+          "local_credentials": {
+            "host":     "dbmy",
+            "db_name":  "tap",
+            "username": "root",
+            "password": "password"
+          },
+          "server_credentials": {
+            "host":     "127.0.0.1",
+            "db_name":  "bd_22030873",
+            "username": "u22030873",
+            "password": "22030873"
+          },
+          "note": "database.php was patched automatically per environment during deployment."
+        },
+        {
+          "file": "api/database.sql",
+          "action": "rewritten",
+          "tables_created": [
+            { "name": "users",      "used_by": "V1 /api/v1/users" },
+            { "name": "productos",  "used_by": "V1 /api/v1/productos AND V2 /api/v2/productos" },
+            { "name": "api_users",  "used_by": "V2 authentication (login/logout/me)" },
+            {
+              "name": "api_tokens",
+              "used_by": "V2 token storage and validation",
+              "foreign_key": "api_tokens.user_id -> api_users.id ON DELETE CASCADE"
+            }
+          ],
+          "seed_data": {
+            "productos": ["PROD-001 Laptop Gaming", "PROD-002 Mouse Inalambrico", "PROD-003 Teclado Mecanico"],
+            "api_users": [
+              { "username": "admin",       "password": "1234",      "status": "ACTIVE",   "note": "Primary admin — updated in session 2" },
+              { "username": "admin1",      "password": "1234",      "status": "ACTIVE",   "note": "Secondary admin — created in session 2" },
+              { "username": "mojarra",     "password": "1234",      "status": "ACTIVE",   "note": "Developer user — created in session 2" },
+              { "username": "sinpermisos", "password": "1234",      "status": "INACTIVE", "note": "No-permission test user — created in session 2. Login returns 401." },
+              { "username": "inactivo",    "password": "Admin1234!", "status": "INACTIVE", "note": "Original test user from session 1" }
+            ]
+          }
+        }
+      ]
+    },
+
+
+    {
+      "step": 6,
+      "title": "Cleanup & Local Validation",
+      "description": "Removed stale files from a previous failed session. Ran PHP syntax check on all 14 API files.",
+      "files_removed": [
+        "api/models/ApiUser.php   (stale root-level, replaced by models/v2/ApiUser.php)",
+        "api/models/ApiToken.php  (stale root-level, replaced by models/v2/ApiToken.php)",
+        "api/core/AuthFilter.php  (stale, replaced by core/V2_AuthFilter.php)",
+        "api/resources/v2/        (premature copy from previous session)"
+      ],
+      "syntax_check": {
+        "tool": "php -l",
+        "files_checked": 14,
+        "result": "No syntax errors detected in any file"
+      },
+      "local_live_tests": {
+        "base_url": "http://localhost:8080",
+        "results": [
+          { "test": "GET  /api/v1/productos",            "status": 200, "result": "products returned" },
+          { "test": "POST /api/v2/login (valid creds)",  "status": 200, "result": "Bearer token issued" },
+          { "test": "GET  /api/v2/me (with token)",      "status": 200, "result": "user profile returned" },
+          { "test": "GET  /api/v2/me (no token)",        "status": 401, "result": "correctly rejected" },
+          { "test": "GET  /api/v2/me (fake token)",      "status": 401, "result": "correctly rejected" },
+          { "test": "POST /api/v2/login (SQL injection)", "status": 401, "result": "injection blocked by PDO prepared statement" }
+        ]
+      }
+    },
+
+    {
+      "step": 7,
+      "title": "Production Deployment",
+      "description": "Deployed all code to the production server via SCP/SSH using expect for password automation. Ran SQL migration on the server database.",
+      "server": {
+        "host": "topicosweb.celaya.tecnm.mx",
+        "user": "u22030873",
+        "deploy_path": "/home/u22030873/public_html/miapp/",
+        "public_url_base": "http://topicosweb.celaya.tecnm.mx/22030873/miapp/api/public"
+      },
+      "steps_executed": [
+        "Removed old api/ directory on server (rm -rf ~/public_html/miapp/api)",
+        "Packaged local api/ into tarball excluding .DS_Store and stale root models",
+        "Patched api/config/database.php inside tarball with server credentials before upload",
+        "Uploaded tarball via SCP to /tmp/api_deploy.tar.gz",
+        "Extracted tarball into ~/public_html/miapp/",
+        "Set permissions: chmod 755 on directories, chmod 644 on all PHP files",
+        "Created server-specific SQL (no CREATE DATABASE — server db pre-exists) and ran it via mysql CLI",
+        "Uploaded updated web/public_html/ files (login.php, logout.php, crud.php)"
+      ],
+      "production_live_tests": {
+        "base_url": "http://topicosweb.celaya.tecnm.mx/22030873/miapp/api/public",
+        "results": [
+          { "test": "GET  /api/v1/productos",                        "status": 200, "result": "12 products returned from production DB" },
+          { "test": "POST /api/v2/login (admin / Admin1234!)",       "status": 200, "result": "Bearer token issued" },
+          { "test": "GET  /api/v2/me (with token)",                  "status": 200, "result": "admin user profile returned" },
+          { "test": "GET  /api/v2/productos (with token)",           "status": 200, "result": "all products returned" },
+          { "test": "GET  /api/v2/me (no token)",                    "status": 401, "result": "unauthorized" }
+        ]
+      }
+    },
+
+    {
+      "step": 8,
+      "title": "Web Frontend — V2 Token Integration",
+      "description": "Integrated the web frontend (login.php, logout.php, crud.php) with the V2 Bearer token system. The web session now also holds an API token obtained at login and revoked at logout.",
+      "changes": [
+        {
+          "file": "web/public_html/login.php",
+          "action": "updated",
+          "what_changed": "After a successful web session auth (usuarios table), login.php now also calls POST /api/v2/login via file_get_contents. The Bearer token and expiry are stored in $_SESSION['api_token'] and $_SESSION['api_expires_at']. The API username is derived from the email prefix (admin@miapp.local -> admin). Token failure is non-blocking — web session continues even if API token is unavailable."
+        },
+        {
+          "file": "web/public_html/logout.php",
+          "action": "updated",
+          "what_changed": "Before destroying the PHP session, logout.php now calls POST /api/v2/logout with the stored Bearer token to revoke it server-side. If no token exists or revocation fails, the session is still destroyed cleanly."
+        },
+        {
+          "file": "web/public_html/crud.php",
+          "action": "updated",
+          "what_changed": "Added a token status badge below the header. When a V2 token is active, shows the truncated token value and expiry time (green badge). When unavailable, shows a warning (red badge). No existing CRUD logic was modified."
+        }
+      ],
+      "auth_flow": [
+        "1. User submits email + password on login.php",
+        "2. Web auth: query usuarios table, verify bcrypt hash -> set $_SESSION['usuario_id'] + nombre",
+        "3. API auth: POST /api/v2/login with {username: email_prefix, password} -> store $_SESSION['api_token'] + api_expires_at",
+        "4. crud.php shows token badge and uses session for all page-level auth",
+        "5. logout.php: POST /api/v2/logout (revokes token) -> session_destroy() -> redirect to login.php"
+      ],
+      "deployed_to_server": true,
+      "syntax_check": {
+        "tool": "php -l",
+        "files_checked": 3,
+        "result": "No syntax errors detected in login.php, logout.php, crud.php"
+      }
+    }
+  ],
+
+  "final_file_tree": {
+    "api/config/database.php":                "shared DB config — credentials patched per environment on deploy",
+    "api/core/Router.php":                    "shared router — dispatch() returns bool for v1/v2 coexistence",
+    "api/core/V2_AuthFilter.php":             "V2 Bearer token middleware",
+    "api/models/v1/User.php":                 "V1_User — table: users (exact origin/main logic)",
+    "api/models/v1/Producto.php":             "V1_Producto — table: productos (exact origin/main logic)",
+    "api/models/v2/ApiUser.php":              "V2_ApiUser — table: api_users",
+    "api/models/v2/ApiToken.php":             "V2_ApiToken — table: api_tokens",
+    "api/models/v2/Producto.php":             "V2_Producto — table: productos",
+    "api/resources/v1/UserResource.php":      "V1_UserResource — no auth required",
+    "api/resources/v1/ProductoResource.php":  "V1_ProductoResource — no auth required",
+    "api/resources/v2/AuthResource.php":      "V2_AuthResource — login / logout / me",
+    "api/resources/v2/UserResource.php":      "V2_UserResource — Bearer token protected",
+    "api/resources/v2/ProductoResource.php":  "V2_ProductoResource — Bearer token protected",
+    "api/public/index.php":                   "single entry point — chains v1 and v2 routers",
+    "api/public/.htaccess":                   "rewrites all traffic to index.php",
+    "api/database.sql":                       "full DDL + DML for local MySQL (includes CREATE DATABASE)",
+    "web/public_html/login.php":              "web login — authenticates session AND requests V2 Bearer token",
+    "web/public_html/logout.php":             "web logout — revokes V2 token then destroys session",
+    "web/public_html/crud.php":               "web CRUD panel — shows V2 token status badge"
+  },
+
+  "design_decisions": [
+    "Class prefix strategy (V1_, V2_) instead of PHP namespaces — compatible with PHP 5-style codebase.",
+    "Router.dispatch() returns bool so two routers chain cleanly in a single if-statement without double output.",
+    "V2 auth uses constant-time password_verify with a dummy hash when user not found — prevents username enumeration via timing attack.",
+    "V1 completely untouched in behavior — origin/main logic read from git and reproduced exactly.",
+    "api_tokens uses ON DELETE CASCADE — deleting an api_user auto-cleans their tokens.",
+    "login.php API token failure is non-blocking — web session works even if api_users has no matching account.",
+    "API username derived from email prefix (admin@miapp.local -> admin) — zero extra form fields needed.",
+    "database.php is patched automatically by deploy script per environment — developer never edits it manually.",
+    "No Docker used on server — raw Apache/PHP/MySQL shared hosting."
+  ],
+
+  "constraints_respected": [
+    "No Docker used anywhere",
+    "V1 logic completely untouched — verified against git origin/main",
+    "V2 fully isolated — separate models, resources, and auth filter",
+    "Single entry point (api/public/index.php) handles both versions",
+    "Web frontend (login.php) integrated with V2 token — session and API auth unified",
+    "All files PHP-syntax-checked before every deployment",
+    "Existing production data (12 products) preserved — INSERT IGNORE used in SQL migration",
+    "Test users created via PHP script on server to avoid bcrypt dollar-sign shell interpolation issues.",
+    "sinpermisos user is INACTIVE — serves as a 401 test case without requiring a fake token."
+  ],
+
+  "production_urls": {
+    "base":              "http://topicosweb.celaya.tecnm.mx/22030873/miapp/api/public",
+    "v1_productos":      "http://topicosweb.celaya.tecnm.mx/22030873/miapp/api/public/api/v1/productos",
+    "v2_login":          "http://topicosweb.celaya.tecnm.mx/22030873/miapp/api/public/api/v2/login",
+    "v2_me":             "http://topicosweb.celaya.tecnm.mx/22030873/miapp/api/public/api/v2/me",
+    "v2_productos":      "http://topicosweb.celaya.tecnm.mx/22030873/miapp/api/public/api/v2/productos",
+    "web_login":         "http://topicosweb.celaya.tecnm.mx/22030873/miapp/web/public_html/login.php"
+  },
+
+  "session_2": {
+    "date": "2026-09-04",
+    "title": "User Management & Postman Collection",
+    "changes": [
+      {
+        "step": 9,
+        "title": "Test User Creation & Postman Collection",
+        "description": "Created multiple API users on the production server via SSH (PHP script to avoid bcrypt shell-interpolation issues). Generated a full Postman collection covering all V1+V2 endpoints.",
+        "users_created": [
+          { "username": "admin",       "password": "1234", "status": "ACTIVE",   "action": "password updated" },
+          { "username": "admin1",      "password": "1234", "status": "ACTIVE",   "action": "created" },
+          { "username": "mojarra",     "password": "1234", "status": "ACTIVE",   "action": "created" },
+          { "username": "sinpermisos", "password": "1234", "status": "INACTIVE", "action": "created — no-permission test user, login returns 401" }
+        ],
+        "postman_collection": {
+          "file": "topweb_api_v2.postman_collection.json",
+          "folders": ["V1 — Users", "V1 — Productos", "V2 — Auth", "V2 — Users", "V2 — Productos", "V2 — Error Cases"],
+          "total_requests": 23,
+          "features": [
+            "Collection variable {{token}} auto-filled by POST /api/v2/login test script",
+            "POST /api/v2/logout clears {{token}} automatically",
+            "Error cases: no token, fake token, wrong password, INACTIVE user (sinpermisos)"
+          ]
+        },
+        "live_verification": [
+          { "user": "admin",       "endpoint": "POST /api/v2/login", "status": 200, "result": "token issued" },
+          { "user": "admin1",      "endpoint": "POST /api/v2/login", "status": 200, "result": "token issued" },
+          { "user": "mojarra",     "endpoint": "POST /api/v2/login", "status": 200, "result": "token issued" },
+          { "user": "sinpermisos", "endpoint": "POST /api/v2/login", "status": 401, "result": "rejected — INACTIVE status" }
+        ]
+      }
+    ]
+  }
+}
