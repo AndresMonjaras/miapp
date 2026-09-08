@@ -1,0 +1,146 @@
+{
+	"info": {
+		"_postman_id": "b3e34b2f-7f51-4091-a15d-85f096b7978e",
+		"name": "Task API (API-First)",
+		"description": "Pruebas de endpoints públicos (sin autenticación) para la API de Tareas.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Listar Todas las Tareas",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://topicosweb.celaya.tecnm.mx/22030873/miapp/api/public/api/tareas",
+					"protocol": "http",
+					"host": [
+						"topicosweb",
+						"celaya",
+						"tecnm",
+						"mx"
+					],
+					"path": [
+						"22030873",
+						"miapp",
+						"api",
+						"public",
+						"api",
+						"tareas"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Crear Nueva Tarea",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"titulo\": \"Hacer mi reporte de API-First\",\n  \"completada\": false\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://topicosweb.celaya.tecnm.mx/22030873/miapp/api/public/api/tareas",
+					"protocol": "http",
+					"host": [
+						"topicosweb",
+						"celaya",
+						"tecnm",
+						"mx"
+					],
+					"path": [
+						"22030873",
+						"miapp",
+						"api",
+						"public",
+						"api",
+						"tareas"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Obtener Tarea por ID",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://topicosweb.celaya.tecnm.mx/22030873/miapp/api/public/api/tareas/1",
+					"protocol": "http",
+					"host": [
+						"topicosweb",
+						"celaya",
+						"tecnm",
+						"mx"
+					],
+					"path": [
+						"22030873",
+						"miapp",
+						"api",
+						"public",
+						"api",
+						"tareas",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Actualizar Tarea (PUT)",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"titulo\": \"Hacer mi reporte de API-First (Actualizado)\",\n  \"completada\": true\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://topicosweb.celaya.tecnm.mx/22030873/miapp/api/public/api/tareas/1",
+					"protocol": "http",
+					"host": [
+						"topicosweb",
+						"celaya",
+						"tecnm",
+						"mx"
+					],
+					"path": [
+						"22030873",
+						"miapp",
+						"api",
+						"public",
+						"api",
+						"tareas",
+						"1"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
