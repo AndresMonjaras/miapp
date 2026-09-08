@@ -3,6 +3,11 @@ info:
   title: Task Management API
   version: 1.0.0
   description: Public API for managing tasks
+servers:
+  - url: /22030873/miapp/api/public
+    description: Production Server
+  - url: http://localhost:8080
+    description: Local Server
 paths:
   /api/tareas:
     get:
