@@ -29,8 +29,20 @@ require_once __DIR__ . '/../resources/v2/AuthResource.php';
 require_once __DIR__ . '/../resources/v2/UserResource.php';
 require_once __DIR__ . '/../resources/v2/ProductoResource.php';
 
+// ── Tareas Resource (public) ────────────────────────────────────────────────
+require_once __DIR__ . '/../resources/TareaResource.php';
+
 // ── Base path (for sub-directory deployments) ────────────────────────────────
 $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+
+// ── Tareas Router ───────────────────────────────────────────────────────────
+$routerTareas = new Router('tareas', $basePath);
+$tareaResource = new TareaResource();
+
+$routerTareas->addRoute('GET',    '',      [$tareaResource, 'list']);
+$routerTareas->addRoute('GET',    '/{id}', [$tareaResource, 'show']);
+$routerTareas->addRoute('POST',   '',      [$tareaResource, 'store']);
+$routerTareas->addRoute('PUT',    '/{id}', [$tareaResource, 'update']);
 
 // ── V1 Router ───────────────────────────────────────────────────────────────
 $routerV1 = new Router('v1', $basePath);
@@ -77,7 +89,7 @@ $routerV2->addRoute('PUT',    '/productos/{id}',  [$v2Producto, 'update']);
 $routerV2->addRoute('DELETE', '/productos/{id}',  [$v2Producto, 'destroy']);
 
 // ── Dispatch ────────────────────────────────────────────────────────────────
-if (!$routerV1->dispatch() && !$routerV2->dispatch()) {
+if (!$routerTareas->dispatch() && !$routerV1->dispatch() && !$routerV2->dispatch()) {
     http_response_code(404);
     echo json_encode([
         "error"   => "not_found",

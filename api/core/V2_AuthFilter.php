@@ -1,6 +1,6 @@
 <?php
 /**
- * V2_AuthFilter — Bearer token authentication middleware for V2 routes.
+ * V2_AthFilter — Bearer token authentication middleware for V2 routes.
  * Isolated from V1 (which has no auth).
  *
  * Usage:
