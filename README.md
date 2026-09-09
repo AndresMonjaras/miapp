@@ -13,11 +13,11 @@ Una vez que el servidor esté corriendo, puedes acceder a la interfaz de Swagger
 
 ### 2. Explorar y probar los endpoints
 Dentro de la página de Swagger:
-1. En la parte superior, asegúrate de seleccionar el entorno correcto en el menú desplegable (Local o Producción).
-2. Haz clic sobre cualquier endpoint (ej. `GET /api/tareas`) para expandir los detalles.
-3. Puedes probar la ruta directamente haciendo clic en el botón **"Try it out"**.
-4. Llena los datos requeridos (si es necesario) y haz clic en **"Execute"**. Verás la respuesta real del servidor en la parte inferior.
+1. En la parte superior, seleccionar el entorno correcto en el menú desplegable (Local o Producción).
+2. En seguida hacer clic sobre cualquier endpoint (ej. `GET /api/tareas`) para expandir los detalles.
+3. Se pueden probar la ruta directamente haciendo clic en el botón **"Try it out"**.
+4. Llena los datos requeridos (si es necesario) y haz clic en **"Execute"**.  
 
 ### 3. Sobre el Archivo YAML
 El contrato principal se encuentra en: `api/openapi.yaml`. 
-Este archivo es la fuente de verdad de la documentación. Cualquier actualización en los endpoints de la API debe reflejarse en este archivo estático.
+ 
