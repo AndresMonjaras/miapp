@@ -84,3 +84,13 @@ INSERT IGNORE INTO `productos` (`sku`, `name`, `description`, `price`, `stock`) 
 INSERT IGNORE INTO `api_users` (`username`, `email`, `password_hash`, `status`) VALUES
 ('admin',    'admin@miapp.local',    '$2y$10$tgY.N.0kyB6VWo5lG4BY1OlCdRrt0fOgv1ik3o.gm2trbM197bw.e', 'ACTIVE'),
 ('inactivo', 'inactivo@miapp.local', '$2y$10$tgY.N.0kyB6VWo5lG4BY1OlCdRrt0fOgv1ik3o.gm2trbM197bw.e', 'INACTIVE');
+
+-- ============================================================
+-- Tareas (Public API)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS tareas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    titulo VARCHAR(255) NOT NULL,
+    completada TINYINT(1) NOT NULL DEFAULT 0,
+    fecha_creacion DATETIME NOT NULL
+);
